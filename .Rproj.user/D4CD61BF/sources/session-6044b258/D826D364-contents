@@ -1,0 +1,111 @@
+# ==============================================================================
+# SCRIPT COMPLETO DESDE CERO: DISEÑO DE ETIQUETAS EXPERIMENTALES
+# Ecosistema: Inkaverse / Huito
+# ==============================================================================
+
+# 1. CARGA DE RECURSOS EXTERNOS E INICIALIZACIÓN
+# ------------------------------------------------------------------------------
+# Conectamos con el servidor de inkaverse para cargar las funciones de maquetación.
+source("https://inkaverse.com/setup.r")
+
+# 2. IMPORTACIÓN LOGÍSTICA DE LA BASE DE DATOS
+# ------------------------------------------------------------------------------
+# Asigna la URL o el ID de tu Google Sheet "Tarpuy 2026-05-26 18:29"
+url_o_id <- "1lslvNuebfI0YQw3KMz7clN8nIs3x8G9Da63E1em7J5o"
+
+gs <- url_o_id %>% 
+  as_sheets_id()
+
+# Leemos la pestaña obligatoria "fb"
+fb <- gs %>% 
+  range_read(ss = ., sheet = "fb")
+
+# Análisis de control: Inspección de cabeceras en la consola
+cat("--- Cabeceras detectadas en tu Excel --- \n")
+print(colnames(fb))
+
+# 3. CONFIGURACIÓN TIPOGRÁFICA
+# ------------------------------------------------------------------------------
+# Descargamos los estilos de fuente seleccionados para el etiquetado
+font <- c("Merriweather Sans", "Permanent Marker", "Tillana")
+huito_fonts(font)
+
+# 4. MAQUETACIÓN GEOMÉTRICA DE LA ETIQUETA (ANCHO: 10 cm, ALTO: 5.2 cm)
+# ------------------------------------------------------------------------------
+label <- fb %>%
+  label_layout(
+    size = c(5.2, 10),
+    border_color = "forestgreen",
+    border_width = 1.5
+  ) %>%
+  # Elemento 1: Logo del proyecto o institución
+  include_image(
+    value = "https://doctoradofisica.uni.edu.pe/wp-content/uploads/2024/01/d123d3.webp",
+    size = 16,
+    position = c(1.6, 9.5)
+  ) %>% 
+  # Elemento 2: Escala gráfica de referencia superior
+  include_image(
+    value = "https://huito.inkaverse.com/img/scale.pdf",
+    size = c(5, 1),
+    position = c(2.6, 8.5)
+  ) %>% 
+  # Elemento 3: QR dinámico vinculado a los datos de la columna 'qrcode'
+  include_barcode(
+    value = "qrcode",
+    size = c(5, 5),
+    position = c(2.6, 5.5)
+  ) %>% 
+  # Elemento 4: Identificador numérico de parcela (Columna 'plots')
+  include_text(
+    value = "plots",
+    position = c(4.4, 9.5),
+    size = 16,
+    color = "black",
+    font = font[3]
+  ) %>% 
+  # Elemento 5: Primer factor en estudio (Columna 'factor1')
+  include_text(
+    value = "factor1",
+    position = c(2.6, 2.6),
+    size = 16,
+    color = "blue",
+    font = font[1],
+    prefix = "Factor1: "
+  ) %>% 
+  # Elemento 6: Segundo factor o bloque (Columna 'factor2')
+  include_text(
+    value = "factor2",
+    position = c(2.6, 1.8),
+    size = 15,
+    color = "red",
+    font = font[1],
+    prefix = "Factor2: "
+  ) %>% 
+  # Elemento 7: Escala gráfica inferior de cierre
+  include_image(
+    value = "https://huito.inkaverse.com/img/scale.pdf",
+    size = c(5, 1),
+    position = c(2.6, 0.9)
+  ) 
+
+# 5. DIAGNÓSTICO: VISTA PREVIA
+# ------------------------------------------------------------------------------
+# Genera un plano muestra en el panel 'Viewer' de RStudio para evaluar el diseño.
+label %>% label_print(mode = "preview")
+
+# 6. EXPORTACIÓN MASIVA PARA IMPRESIÓN (PLIEGO 40x20 cm)
+# ------------------------------------------------------------------------------
+# Creamos la carpeta de salida automáticamente en tu directorio de trabajo
+if (!dir.exists("design")) dir.create("design")
+
+# Generamos el PDF final con todas las filas procesadas
+label %>% 
+  label_print(
+    mode = "complete",
+    filename = "design/labels",
+    paper = c(40, 20),
+    units = "cm"
+  )
+
+cat("\n[ÉXITO]: El archivo PDF ha sido generado en la ruta: 'design/labels.pdf'\n")
