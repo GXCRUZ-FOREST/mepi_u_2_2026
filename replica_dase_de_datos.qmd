@@ -1,0 +1,586 @@
+
+title: "Efecto de Enmiendas Orgánicas e Inertes en el Desarrollo de Plántulas de Lechosa (*Carica papaya*)"
+author: "Romel Wilder Cruz Caraujulca
+format:
+  html:
+    toc: true
+    toc-expand: true
+    toc-depth: 4
+    toc-location: left
+    number-sections: true
+    self-contained: true
+    code-fold: true
+    output-file: "ESM"
+editor_options: 
+  chunk_output_type: console
+execute: 
+  warning: false
+  message: false
+  echo: true
+---
+
+# Project Setup
+
+```{r}
+#| label:  setup
+
+source('https://inkaverse.com/setup.r')
+```
+
+# Data import
+
+```{r} 
+gs <- "https://docs.google.com/spreadsheets/d/1HKfqO_56F097O7X_bqJXbTzKoqT4M9PzOtHJxDzFB-U/edit?gid=111610617#gid=111610617" %>% 
+  as_sheets_id()
+
+fb <- gs %>% 
+  range_read(ss = .,sheet = "fb")
+View(fb)
+```
+# Preparación de datos
+
+```{r}
+
+#| label: data-prep
+
+fb <- fb |>
+  mutate(
+    material = case_when(
+      str_detect(sust, "Humus")      ~ "Humus",
+      str_detect(sust, "Arena")      ~ "Arena",
+      str_detect(sust, "Cascarilla") ~ "Cascarilla",
+      str_detect(sust, "Estiercol")  ~ "Estiercol",
+      TRUE                           ~ "Testigo"
+    ),
+    proporcion = case_when(
+      str_detect(sust, "2:1") ~ "2:1",
+      str_detect(sust, "3:1") ~ "3:1",
+      TRUE                    ~ "Testigo"
+    ),
+    bloq       = factor(bloq),
+    trat       = factor(trat),
+    material   = factor(material),
+    proporcion = factor(proporcion)
+  )
+```
+# Altura de planta a las 13 semanas (`altp_13s`)
+
+# Excluir testigo
+
+```{r}
+#| label: filtro-testigo
+
+fb2 <- fb %>%
+  filter(trat != "T1")
+```
+# Modelo estadístico
+
+$$altp\_13s_{ijk} = \mu + \text{Bloque}_i + \text{Material}_j + \text{Proporcion}_k + (\text{Material} \times \text{Proporcion})_{jk} + \varepsilon_{ijk}$$
+
+# Análisis de varianza
+
+```{r}
+#| label: anova-altp
+
+library(agricolae)
+
+modelo_altp <- aov(
+  altp_13s ~ bloq + material*proporcion,
+  data = fb2
+)
+summary(modelo_altp)
+
+```
+# Comparación de medias 
+
+```{r}
+#| label: mc-altp
+
+library(emmeans)
+library(multcomp)
+library(tibble)
+
+mc_altp <- emmeans(
+  modelo_altp,
+  ~ material * proporcion
+) %>%
+  cld(adjust = "sidak",
+      Letters = letters) %>%
+  tibble()
+mc_altp
+```
+# Visualización
+
+```{r}
+
+ggplot(mc_altp,
+       aes(material,
+           emmean,
+           fill = proporcion)) +
+
+  geom_col(
+    position = position_dodge(0.7),
+    width = 0.58,
+    color = "black",
+    linewidth = 0.7
+  ) +
+
+  geom_errorbar(
+    aes(ymin = lower.CL,
+        ymax = upper.CL),
+    position = position_dodge(0.7),
+    width = 0.12,
+    linewidth = 0.7
+  ) +
+
+  geom_text(
+    aes(label = .group,
+        y = upper.CL + 0.35),
+    position = position_dodge(0.7),
+    size = 4.8,
+    fontface = "bold"
+  ) +
+
+  scale_fill_manual(
+    values = c(
+      "2:1" = "#52BE80",
+      "3:1" = "#1E8449"
+    )
+  ) +
+
+  labs(
+    title = "Altura de planta a las 13 semanas",
+    subtitle = "Efecto del material orgánico y la proporción",
+    x = "Material orgánico",
+    y = "Altura de planta (cm)",
+    fill = "Proporción"
+  ) +
+
+  coord_cartesian(
+    ylim = c(
+      min(mc_altp$lower.CL),
+      max(mc_altp$upper.CL) + 1.2
+    )
+  ) +
+
+  theme_minimal(base_size = 13) +
+
+  theme(
+
+    plot.title = element_text(
+      hjust = 0.5,
+      face = "bold",
+      size = 18
+    ),
+
+    plot.subtitle = element_text(
+      hjust = 0.5,
+      size = 11,
+      face = "italic"
+    ),
+
+    axis.title = element_text(
+      face = "bold",
+      size = 13
+    ),
+
+    axis.text = element_text(
+      face = "bold",
+      color = "black"
+    ),
+
+    legend.position = "top",
+
+    legend.title = element_text(
+      face = "bold"
+    ),
+
+    panel.grid.minor = element_blank(),
+
+    panel.grid.major.x = element_blank()
+  )
+```
+# Diametro de planta a las 13 semanas (`diam_13s`)
+
+# Excluir testigo
+
+```{r}
+#| label: filtro-testigo
+
+fb2 <- fb %>%
+  filter(trat != "T1")
+
+```
+# Modelo estadístico
+
+$$diam\_13s_{ijk} = \mu + \text{Bloque}_i + \text{Material}_j + \text{Proporcion}_k + (\text{Material} \times \text{Proporcion})_{jk} + \varepsilon_{ijk}$$
+# Análisis de varianza
+
+```{r}
+#| label: anova-diam
+
+library(agricolae)
+
+modelo_diam <- aov(
+  diam_13s ~ bloq + material*proporcion,
+  data = fb2
+)
+summary(modelo_diam)
+```
+# Comparación de medias 
+```{r}
+#| label: mc-diam
+
+library(emmeans)
+library(multcomp)
+library(tibble)
+
+mc_diam <- emmeans(
+  modelo_diam,
+  ~ material * proporcion
+) %>%
+  cld(adjust = "sidak",
+      Letters = letters) %>%
+  tibble()
+mc_diam
+```
+# Visualización 
+```{r}
+#| label: plot-diam
+
+ggplot(mc_diam,
+       aes(y = material,
+           x = emmean,
+           fill = proporcion)) +
+
+  geom_col(
+    position = position_dodge(0.7),
+    width = 0.6,
+    color = "black"
+  ) +
+
+  geom_text(
+    aes(label = .group,
+        x = upper.CL + 0.08),
+    position = position_dodge(0.7),
+    fontface = "bold",
+    size = 4.5
+  ) +
+
+  labs(
+    title = "Diámetro del tallo",
+    subtitle = "Crecimiento diamétrico según sustrato",
+    x = "Diámetro (mm)",
+    y = "Material",
+    fill = "Proporción"
+  ) +
+
+  scale_fill_manual(
+    values = c(
+      "2:1" = "#5DADE2",
+      "3:1" = "#1B4F72"
+    )
+  ) +
+
+  theme_minimal(base_size = 13) +
+
+  theme(
+    plot.title = element_text(
+      face = "bold",
+      size = 18
+    ),
+
+    axis.title = element_text(
+      face = "bold"
+    ),
+
+    legend.position = "bottom"
+  )
+
+```
+# Peso seco total (`p_seco_tot`)
+
+# Excluir testigo
+
+```{r}
+fb2 <- fb %>%
+  filter(trat != "T1")
+
+```
+# Modelo estadístico}
+
+$$p\_seco\_tot_{ijk} =\mu + \text{Bloque}_i + \text{Material}_j + \text{Proporcion}_k +(\text{Material} \times \text{Proporcion})_{jk} + \varepsilon_{ijk}$$
+# Analisis se varianza
+
+```{r}
+#| label: anova-peso
+
+modelo_peso <- aov(
+  p_seco_tot ~ bloq + material*proporcion,
+  data = fb2
+)
+summary(modelo_peso)
+
+```
+# Comparación de medias
+```{r}
+#| label: mc-peso
+
+library(emmeans)
+library(multcomp)
+library(tibble)
+
+mc_peso <- emmeans(
+  modelo_peso,
+  ~ material * proporcion
+) %>%
+  cld(adjust = "tukey",
+      Letters = letters) %>%
+  tibble()
+mc_peso
+
+```
+# Visualización
+```{r}
+#| label: plot-peso
+
+# Gráfico agrupado - Peso seco total
+
+library(ggplot2)
+
+ggplot(mc_peso,
+       aes(x = material,
+           y = emmean,
+           fill = proporcion)) +
+
+  geom_col(
+    position = position_dodge(0.8),
+    width = 0.65,
+    color = "black",
+    linewidth = 0.7
+  ) +
+
+  geom_errorbar(
+    aes(ymin = lower.CL,
+        ymax = upper.CL),
+    position = position_dodge(0.8),
+    width = 0.18,
+    linewidth = 0.7
+  ) +
+
+  geom_text(
+    aes(label = .group,
+        y = upper.CL + 0.05),
+    position = position_dodge(0.8),
+    size = 4.5,
+    fontface = "bold"
+  ) +
+
+  labs(
+    title = "Peso seco total",
+    x = "Material",
+    y = "Peso seco total (g)",
+    fill = "Proporción"
+  ) +
+
+  scale_fill_manual(
+    values = c(
+      "2:1" = "#D68910",
+      "3:1" = "#873600"
+    )
+  ) +
+
+  theme_classic() +
+
+  theme(
+    plot.title = element_text(
+      hjust = 0.5,
+      face = "bold",
+      size = 16
+    ),
+
+    axis.title = element_text(
+      face = "bold",
+      size = 13
+    ),
+
+    axis.text = element_text(
+      size = 11,
+      face = "bold"
+    ),
+
+    legend.title = element_text(
+      face = "bold"
+    ),
+
+    legend.position = "top"
+  )
+
+
+```
+# Índice de Dickson (`i_Dickson`)
+
+# Excluir testigo
+fb2 <- fb %>%
+  filter(trat != "T1")x|
+  
+# Modelo estadístico 
+$$i\_Dickson_{ij} = \mu + \text{Bloque}_i + \text{Tratamiento}_j + \varepsilon_{ij}$$
+
+# Analisis de varianza
+
+```{r}
+#| label: anova-dickson
+
+modelo_dickson <- aov( i_Dickson ~ bloq + material*proporcion, data = fb2)
+
+summary(modelo_dickson)
+
+```
+# Comparación de medias
+
+```{r}
+library(emmeans)
+library(multcomp)
+library(tibble)
+
+mc_dickson <- emmeans(
+  modelo_dickson,
+~ material * proporcion) %>%
+cld(adjust = "tukey",
+Letters = letters) %>%
+tibble()
+mc_dickson
+
+```
+# Visualización
+
+```{r}
+#| label: plot-dickson
+
+library(ggplot2)
+
+ggplot(mc_dickson,
+       aes(x = material,
+           y = emmean,
+           color = proporcion,
+           group = proporcion)) +
+
+  geom_point(
+    position = position_dodge(0.4),
+    size = 4
+  ) +
+
+  geom_errorbar(
+    aes(ymin = lower.CL,
+        ymax = upper.CL),
+    position = position_dodge(0.4),
+    width = 0.12,
+    linewidth = 0.8
+  ) +
+
+  geom_line(
+    position = position_dodge(0.4),
+    linewidth = 0.8
+  ) +
+
+  geom_text(
+    aes(label = .group,
+        y = upper.CL + 0.04),
+    position = position_dodge(0.4),
+    size = 4.5,
+    fontface = "bold",
+    color = "black"
+  ) +
+
+  labs(
+    title = "Índice de Dickson",
+    subtitle = "Calidad morfológica de planta por tratamiento",
+    x = "Material orgánico",
+    y = "Índice de Dickson",
+    color = "Proporción"
+  ) +
+
+  scale_color_manual(
+    values = c(
+      "2:1" = "#48C9B0",
+      "3:1" = "#117A65"
+    )
+  ) +
+
+  coord_cartesian(
+    ylim = c(
+      min(mc_dickson$lower.CL),
+      max(mc_dickson$upper.CL) + 0.08
+    )
+  ) +
+
+  theme_minimal(base_size = 13) +
+
+  theme(
+
+    plot.title = element_text(
+      hjust = 0.5,
+      face = "bold",
+      size = 18
+    ),
+
+    plot.subtitle = element_text(
+      hjust = 0.5,
+      face = "italic",
+      size = 11
+    ),
+
+    axis.title = element_text(
+      face = "bold"
+    ),
+
+    axis.text = element_text(
+      face = "bold",
+      color = "black"
+    ),
+
+    legend.position = "top",
+
+    legend.title = element_text(
+      face = "bold"
+    ),
+
+    panel.grid.minor = element_blank(),
+
+    panel.grid.major.x = element_blank()
+  )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
